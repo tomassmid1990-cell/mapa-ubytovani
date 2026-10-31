@@ -1,0 +1,69 @@
+name: Synchronizace ubytovani
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 7 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Stazeni repozitare
+        uses: actions/checkout@v4
+
+      - name: Stazeni databaze
+        env:
+          CSV_URL: ${{ secrets.UBYTOVANI_CSV_URL }}
+        run: |
+          test -n "$CSV_URL"
+          curl --fail --location --silent --show-error \
+            "$CSV_URL" -o ubytovani_new.csv
+
+      - name: Kontrola databaze
+        run: |
+          python3 - <<'PY'
+          import csv
+
+          with open("ubytovani_new.csv", encoding="utf-8-sig", newline="") as f:
+              rows = list(csv.DictReader(f))
+
+          with open("ubytovani.csv", encoding="utf-8-sig", newline="") as f:
+              old = list(csv.DictReader(f))
+
+          assert len(rows) >= len(old), "Nova databaze obsahuje mene zaznamu"
+          assert len(rows) >= 379, "Databaze je neuplna"
+
+          ids = [r["id"] for r in rows]
+          assert all(ids), "Chybi ID zaznamu"
+          assert len(ids) == len(set(ids)), "Duplicitni ID"
+
+          required = {"id", "name", "address", "lat", "lon"}
+          assert required.issubset(rows[0]), "Chybi povinne sloupce"
+
+          for r in rows:
+              assert r["name"].strip(), "Chybi nazev zarizeni"
+              if r["lat"] or r["lon"]:
+                  assert -90 <= float(r["lat"]) <= 90
+                  assert -180 <= float(r["lon"]) <= 180
+
+          print(f"Kontrola OK: {len(rows)} zaznamu")
+          PY
+
+      - name: Aktualizace CSV
+        run: |
+          mv ubytovani_new.csv ubytovani.csv
+
+          git config user.name "github-actions"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add ubytovani.csv
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Automaticka aktualizace databaze ubytovani"
+            git push
+          fi
