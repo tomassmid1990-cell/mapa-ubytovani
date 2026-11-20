@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nepokryté oblasti 10 km – Morava a Slezsko</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+html,body,#map{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+#map{height:100vh}
+#info{position:absolute;z-index:1000;top:12px;left:12px;background:#fffffff2;padding:14px 16px;border-radius:12px;max-width:min(420px,calc(100vw - 45px));box-shadow:0 3px 18px #0004;line-height:1.45}
+h1{font-size:18px;margin:0 0 6px;color:#14344d}
+p{font-size:13px;margin:5px 0}
+strong{color:#a32724}
+.status{font-size:12px;color:#57616b}
+#err{color:#9d1d1d}
+a{color:#145f88}
+#info button{border:1px solid #bbc6cb;background:#f5f8fb;padding:5px 9px;border-radius:6px;margin-top:5px;cursor:pointer}
+@media(max-width:600px){#info{top:7px;left:7px;right:7px;padding:10px;max-height:35vh;overflow:auto}h1{font-size:16px}p{font-size:12px}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<section id="info" aria-label="Informace o pokrytí">
+<h1>Nepokryté oblasti – rádius 10 km</h1>
+<p><b>Morava a české Slezsko · stav 20. 11. 2026</b></p>
+<p>Orientanční evidenční pokrytí: <strong>89,24 %</strong> · nepokryto <strong>708 z 6 582</strong> středů rastru.</p>
+<p>Červená = střed rastru mimo 10 km od zařízení v hlavním katalogu; modrá = polohy zařízení MASTER. Rádius je <b>vzdušnou čarou</b>.</p>
+<p class="status">Výpočet používá 379 bodů MASTER uvnitř historické hranice, rastr ~2 × 2 km. Nezaručuje aktuální provoz, polohovou přesnost, cenu ani dostupnost pro pracovní čety.</p>
+<p id="status" class="status">Načítám vrstvy…</p>
+<p><a href="./index.html">Hlavní interaktivní mapa</a> · <a href="./pokryti_10km_nepokryte_2026-11-20.geojson" download>GeoJSON pro QGIS</a></p>
+<button id="close">Sbalit panel</button>
+</section>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(()=>{"use strict";
+const map=L.map("map",{preferCanvas:true,zoomControl:false}).setView([49.55,16.85],8);
+L.control.zoom({position:"bottomright"}).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:18}).addTo(map);
+const gapLayer=L.layerGroup().addTo(map);
+const masterLayer=L.layerGroup().addTo(map);
+const borderLayer=L.layerGroup().addTo(map);
+L.control.layers({},{"Nepokryté body 10 km":gapLayer,"Zařízení MASTER":masterLayer,"Hranice Moravy a Slezska":borderLayer},{collapsed:false,position:"topright"}).addTo(map);
+const status=document.getElementById("status");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function csvRows(s){s=s.replace(/^\uFEFF/,"");let out=[],row=[],v="",q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){v+='"';i++}else q=!q}else if(c===","&&!q){row.push(v);v=""}else if((c==="\r"||c==="\n")&&!q){if(c==="\r"&&s[i+1]==="\n")i++;row.push(v);if(row.some(x=>String(x).trim()))out.push(row);row=[];v=""}else v+=c;}row.push(v);if(row.some(x=>String(x).trim()))out.push(row);return out;}
+const fetchResource=async(path,json)=>{const r=await fetch(path+"?v=20261120",{cache:"no-store"});if(!r.ok)throw Error(path+" HTTP "+r.status);return json?r.json():r.text()};
+async function load(){
+ try{
+ const [b,g,c]=await Promise.all([fetchResource("./hranice.geojson",true),fetchResource("./pokryti_10km_nepokryte_2026-11-20.geojson",true),fetchResource("./ubytovani.csv",false)]);
+ if(g.type!=="FeatureCollection"||g.features.length!==708)throw Error("Nesprávný nebo neúplný soubor pokrytí");
+ L.geoJSON(b,{style:{color:"#2261a0",weight:2,fillOpacity:0},interactive:false}).addTo(borderLayer);
+ const h=csvRows(c);const cols=h.shift().map(x=>x.toLowerCase().trim());const index=Object.fromEntries(cols.map((x,i)=>[x,i]));
+ let masterCount=0;
+ for(const row of h){const la=Number(String(row[index.lat]||"").replace(",",".")),lo=Number(String(row[index.lon]||"").replace(",","."));if(!Number.isFinite(la)||!Number.isFinite(lo)||la<47||la>52||lo<12||lo>19)continue;masterCount++;L.circleMarker([la,lo],{radius:3,color:"#2261a0",weight:1,fillOpacity:.75}).bindPopup("<b>"+esc(row[index.name])+"</b><br>"+esc(row[index.address])+"<br>ID "+esc(row[index.id])+"<br>Cena: "+esc(row[index.price]||"nezjištěna")).addTo(masterLayer);}
+ for(const f of g.features){const xy=f.geometry.coordinates,p=f.properties||{};L.circleMarker([xy[1],xy[0]],{radius:4,color:"#8b1d1d",weight:1,fillColor:"#e14334",fillOpacity:.8}).bindPopup("<b>Nepokrytý rastr 10 km</b><br>Nejbližší MASTER: "+esc(p.nearest_master_id)+"<br>Vzdálenost: "+esc(p.distance_to_nearest_km)+" km<br>"+esc(p.region)+"<br><small>Výpočet k 20.11.2026. Nejde o hranici přesné plošné mezery.</small>").addTo(gapLayer);}
+ status.textContent="Načteno "+g.features.length+" nepokrytých bodů, "+masterCount+" zařízení MASTER (včetně objektů mimo historické území).";
+ }catch(e){status.textContent="Chyba: "+e.message;status.id="err";}
+}
+const close=document.getElementById("close");
+close.onclick=()=>{const node=document.getElementById("info");let hidden=node.dataset.hidden==="1";node.querySelectorAll("p").forEach(p=>p.style.display=hidden?"":"none");close.textContent=hidden?"Sbalit panel":"Rozbalit panel";node.dataset.hidden=hidden?"0":"1";map.invalidateSize()};
+load();
+})();
+</script>
+</body></html>
