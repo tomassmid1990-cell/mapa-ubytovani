@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nepokryté oblasti 10 km – Morava a Slezsko</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./leaflet.css?v=20261120-fix1">
 <style>
 html,body,#map{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
-#map{height:100vh}
+#map{position:fixed;inset:0;width:100vw;height:100vh;background:#ecf2f4}
 #info{position:absolute;z-index:1000;top:12px;left:12px;background:#fffffff2;padding:14px 16px;border-radius:12px;max-width:min(420px,calc(100vw - 45px));box-shadow:0 3px 18px #0004;line-height:1.45}
 h1{font-size:18px;margin:0 0 6px;color:#14344d}
 p{font-size:13px;margin:5px 0}
@@ -58,7 +58,7 @@ async function load(){
  for(const row of h){const la=Number(String(row[index.lat]||"").replace(",",".")),lo=Number(String(row[index.lon]||"").replace(",","."));if(!Number.isFinite(la)||!Number.isFinite(lo)||la<47||la>52||lo<12||lo>19)continue;masterCount++;L.circleMarker([la,lo],{radius:3,color:"#2261a0",weight:1,fillOpacity:.75}).bindPopup("<b>"+esc(row[index.name])+"</b><br>"+esc(row[index.address])+"<br>ID "+esc(row[index.id])+"<br>Cena: "+esc(row[index.price]||"nezjištěna")).addTo(masterLayer);}
  for(const f of g.features){const xy=f.geometry.coordinates,p=f.properties||{};L.circleMarker([xy[1],xy[0]],{radius:4,color:"#8b1d1d",weight:1,fillColor:"#e14334",fillOpacity:.8}).bindPopup("<b>Nepokrytý rastr 10 km</b><br>Nejbližší MASTER: "+esc(p.nearest_master_id)+"<br>Vzdálenost: "+esc(p.distance_to_nearest_km)+" km<br>"+esc(p.region)+"<br><small>Výpočet k 20.11.2026. Nejde o hranici přesné plošné mezery.</small>").addTo(gapLayer);}
  for(const f of k.features){const xy=f.geometry.coordinates,p=f.properties||{},href=String(p.source_url||"");let popup="<b>"+esc(p.name)+"</b> <small>(NEOVĚŘENÝ KANDIDÁT)</small><br>"+esc(p.address)+"<br>ID "+esc(p.id)+"<br>Cena (pracovní): "+esc(p.price_unverified_text)+"<br>Stav: "+esc(p.verification_status)+"<br><small>Není započítán do aktuálního pokrytí; aktuální cena a volné kapacity nemusí být potvrzeny.</small>";if(/^https?:\/\//i.test(href))popup+="<br><a target=\"_blank\" rel=\"noopener noreferrer\" href=\""+esc(href)+"\">Zdroj ubytování</a>";L.circleMarker([xy[1],xy[0]],{radius:6,color:"#8c6000",weight:1.5,fillColor:"#f5b526",fillOpacity:.9}).bindPopup(popup).addTo(candidateLayer);}
- for(const f of p.features){const xy=f.geometry.coordinates,z=f.properties||{};L.circleMarker([xy[1],xy[0]],{radius:4,color:"#52237e",weight:1,fillColor:"#8754b5",fillOpacity:.8}).bindPopup("<b>Modelová mezera 10 km – NEOVĚŘENO</b><br>Nejbližší kandidát: "+esc(z.nearest_candidate_id)+"<br>Vzdálenost: "+esc(z.distance_to_nearest_candidate_km)+" km<br><small>Tato oblast by zůstala mimo dosah 10 km i po hypotetickém započítání všech 75 kandidátů. Nejde o skutečnou dostupnost ubytování.</small>").addTo(modelResidualLayer);}
+ for(const f of p.features){const xy=f.geometry.coordinates,z=f.properties||{};L.circleMarker([xy[1],xy[0]],{radius:4,color:"#52237e",weight:1,fillColor:"#8754b5",fillOpacity:.8}).bindPopup("<b>Modelová mezera 10 km – NEOVĚŘENO</b><br>Nejbližší kandidát: "+esc(z.nearest_candidate_id)+"<br>Vzdálenost: "+esc(z.distance_to_nearest_candidate_km)+" km<br><small>Tato oblast by zůstala mimo dosah 10 km i po hypotetickém započítání všech 87 kandidátů. Nejde o skutečnou dostupnost ubytování.</small>").addTo(modelResidualLayer);}
  status.textContent="Načteno "+g.features.length+" nepokrytých bodů vůči MASTER, "+p.features.length+" modelových zbytkových mezer, "+masterCount+" zařízení MASTER a "+k.features.length+" pracovních kandidátů. Evidenční scénář 98,10 % je pouze hypotetický.";
  }catch(e){status.textContent="Chyba: "+e.message;status.id="err";}
 }
