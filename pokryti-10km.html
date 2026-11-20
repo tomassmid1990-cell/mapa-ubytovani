@@ -24,14 +24,16 @@ a{color:#145f88}
 <h1>Nepokryté oblasti – rádius 10 km</h1>
 <p><b>Morava a české Slezsko · stav 20. 11. 2026</b></p>
 <p>Orientační evidenční pokrytí: <strong>89,24 %</strong> · nepokryto <strong>708 z 6 582</strong> středů rastru.</p>
-<p>Červené body = nepokryté středy rastru vůči MASTER; fialové (volitelná vrstva) = mezery zůstávající i v hypotetickém modelu po kandidátech; modré = MASTER; <b style="color:#b87800">oranžové = pracovní kandidáti (neověřené objekty)</b>. Rádius je <b>vzdušnou čarou</b>.</p><p>Pokud by se ověřilo všech 87 zobrazených kandidátů, vypočtené evidenční pokrytí by hypoteticky dosáhlo <b>98,10 %</b>. Jde pouze o scénář, nikoli skutečný stav.</p>
+<p>Červené body = nepokryté středy rastru vůči MASTER; <b style="color:#078781">tyrkysové (volitelná vrstva) = body ČSÚ HUZ 2025</b>; fialové (volitelná vrstva) = mezery zůstávající i v hypotetickém modelu po kandidátech; modré = MASTER; <b style="color:#b87800">oranžové = pracovní kandidáti (neověřené objekty)</b>. Rádius je <b>vzdušnou čarou</b>.</p><p>Pokud by se ověřilo všech 87 zobrazených kandidátů, vypočtené evidenční pokrytí by hypoteticky dosáhlo <b>98,10 %</b>. Jde pouze o scénář, nikoli skutečný stav.</p>
 <p class="status">Výpočet používá 379 bodů MASTER uvnitř historické hranice, rastr ~2 × 2 km. Nezaručuje aktuální provoz, polohovou přesnost, cenu ani dostupnost pro pracovní čety.</p>
 <p style="border-left:4px solid #b05a20;background:#fff4e7;padding:8px;font-size:12px"><b>Kontrola ČSÚ 20. 11. 2026:</b> u 8 objektů MASTER byl zjištěn významný rozpor v GPS, z toho jeden přibližně 194 km. Údaje 89,24 % a 98,10 % jsou <b>předběžné modely</b>; po opravách GPS se musí znovu přepočítat. <a target="_blank" rel="noopener noreferrer" href="https://docs.google.com/spreadsheets/d/1C_DFRXNFin6-smSKaoWoB41UEnOh2J1uxx-4c157hrU/edit#gid=261120403">Zobrazit audit</a>.</p>
 <p id="status" class="status">Načítám vrstvy…</p>
-<p><a href="./index.html">Hlavní interaktivní mapa</a> · <a href="./pokryti_10km_nepokryte_2026-11-20.geojson" download>Nepokryté body pro QGIS</a> · <a href="./kandidati_mapa_2026-11-20.geojson" download>Pracovní kandidáti pro QGIS</a> · <a href="./pokryti_10km_model_zbyva_2026-11-20.geojson" download>Zbývající modelové mezery pro QGIS</a></p>
+<p id="csu-status" class="status">ČSÚ HUZ 2025: 3 497 referenčních bodů (vrstva ve výchozím stavu vypnutá). Nezapočítává se do pokrytí MASTER.</p>
+<p><a href="./index.html">Hlavní interaktivní mapa</a> · <a href="./pokryti_10km_nepokryte_2026-11-20.geojson" download>Nepokryté body pro QGIS</a> · <a href="./kandidati_mapa_2026-11-20.geojson" download>Pracovní kandidáti pro QGIS</a> · <a href="./pokryti_10km_model_zbyva_2026-11-20.geojson" download>Zbývající modelové mezery pro QGIS</a> · <a href="./csu_huz_2025-06-01.geojson" download>ČSÚ HUZ 2025 pro QGIS</a></p>
 <button id="close">Sbalit panel</button>
 </section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./csu-huz-layer.js?v=20261120-csu1"></script>
 <script>
 (()=>{"use strict";
 const map=L.map("map",{preferCanvas:true,zoomControl:false}).setView([49.55,16.85],8);
@@ -41,8 +43,10 @@ const gapLayer=L.layerGroup().addTo(map);
 const masterLayer=L.layerGroup().addTo(map);
 const candidateLayer=L.layerGroup().addTo(map);
 const modelResidualLayer=L.layerGroup();
+const csuReference=window.createCsuHuzLayer(map,(message,isError)=>{const el=document.getElementById("csu-status");el.textContent=message;el.style.color=isError?"#991b1b":"#18746e";});
+const csuLayer=csuReference.layer;
 const borderLayer=L.layerGroup().addTo(map);
-L.control.layers({},{"Nepokryté body 10 km":gapLayer,"Zařízení MASTER":masterLayer,"Kandidáti s GPS (NEOVĚŘENO)":candidateLayer,"Model: 125 zbývajících mezer (FIALOVĚ)":modelResidualLayer,"Hranice Moravy a Slezska":borderLayer},{collapsed:false,position:"topright"}).addTo(map);
+L.control.layers({},{"Nepokryté body 10 km":gapLayer,"Zařízení MASTER":masterLayer,"Kandidáti s GPS (NEOVĚŘENO)":candidateLayer,"ČSÚ HUZ 2025 (3 497 bodů)":csuLayer,"Model: 125 zbývajících mezer (FIALOVĚ)":modelResidualLayer,"Hranice Moravy a Slezska":borderLayer},{collapsed:false,position:"topright"}).addTo(map);
 const status=document.getElementById("status");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function csvRows(s){s=s.replace(/^\uFEFF/,"");let out=[],row=[],v="",q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){v+='"';i++}else q=!q}else if(c===","&&!q){row.push(v);v=""}else if((c==="\r"||c==="\n")&&!q){if(c==="\r"&&s[i+1]==="\n")i++;row.push(v);if(row.some(x=>String(x).trim()))out.push(row);row=[];v=""}else v+=c;}row.push(v);if(row.some(x=>String(x).trim()))out.push(row);return out;}
