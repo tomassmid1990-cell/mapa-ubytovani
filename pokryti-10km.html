@@ -24,7 +24,7 @@ a{color:#145f88}
 <h1>Nepokryté oblasti – rádius 10 km</h1>
 <p><b>Morava a české Slezsko · stav 20. 11. 2026</b></p>
 <p>Orientační evidenční pokrytí: <strong>89,24 %</strong> · nepokryto <strong>708 z 6 582</strong> středů rastru.</p>
-<p>Červené body = nepokryté středy rastru; modré = MASTER; <b style="color:#b87800">oranžové = pracovní kandidáti (neověřené objekty)</b>. Rádius je <b>vzdušnou čarou</b>.</p><p>Pokud by se ověřilo všech 63 zobrazených kandidátů, vypočtené evidenční pokrytí by hypoteticky dosáhlo <b>93,74 %</b>. Jde pouze o scénář, nikoli skutečný stav.</p>
+<p>Červené body = nepokryté středy rastru; modré = MASTER; <b style="color:#b87800">oranžové = pracovní kandidáti (neověřené objekty)</b>. Rádius je <b>vzdušnou čarou</b>.</p><p>Pokud by se ověřilo všech 64 zobrazených kandidátů, vypočtené evidenční pokrytí by hypoteticky dosáhlo <b>93,74 %</b>. Jde pouze o scénář, nikoli skutečný stav.</p>
 <p class="status">Výpočet používá 379 bodů MASTER uvnitř historické hranice, rastr ~2 × 2 km. Nezaručuje aktuální provoz, polohovou přesnost, cenu ani dostupnost pro pracovní čety.</p>
 <p id="status" class="status">Načítám vrstvy…</p>
 <p><a href="./index.html">Hlavní interaktivní mapa</a> · <a href="./pokryti_10km_nepokryte_2026-11-20.geojson" download>Nepokryté body pro QGIS</a> · <a href="./kandidati_mapa_2026-11-20.geojson" download>Pracovní kandidáti pro QGIS</a></p>
@@ -44,12 +44,12 @@ L.control.layers({},{"Nepokryté body 10 km":gapLayer,"Zařízení MASTER":maste
 const status=document.getElementById("status");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function csvRows(s){s=s.replace(/^\uFEFF/,"");let out=[],row=[],v="",q=false;for(let i=0;i<s.length;i++){const c=s[i];if(c==='"'){if(q&&s[i+1]==='"'){v+='"';i++}else q=!q}else if(c===","&&!q){row.push(v);v=""}else if((c==="\r"||c==="\n")&&!q){if(c==="\r"&&s[i+1]==="\n")i++;row.push(v);if(row.some(x=>String(x).trim()))out.push(row);row=[];v=""}else v+=c;}row.push(v);if(row.some(x=>String(x).trim()))out.push(row);return out;}
-const fetchResource=async(path,json)=>{const r=await fetch(path+"?v=20261120c",{cache:"no-store"});if(!r.ok)throw Error(path+" HTTP "+r.status);return json?r.json():r.text()};
+const fetchResource=async(path,json)=>{const r=await fetch(path+"?v=20261120d",{cache:"no-store"});if(!r.ok)throw Error(path+" HTTP "+r.status);return json?r.json():r.text()};
 async function load(){
  try{
  const [b,g,c,k]=await Promise.all([fetchResource("./hranice.geojson",true),fetchResource("./pokryti_10km_nepokryte_2026-11-20.geojson",true),fetchResource("./ubytovani.csv",false),fetchResource("./kandidati_mapa_2026-11-20.geojson",true)]);
  if(g.type!=="FeatureCollection"||g.features.length!==708)throw Error("Nesprávný nebo neúplný soubor pokrytí");
- if(k.type!=="FeatureCollection"||k.features.length!==63)throw Error("Nesprávný nebo neúplný soubor pracovních kandidátů");
+ if(k.type!=="FeatureCollection"||k.features.length!==64)throw Error("Nesprávný nebo neúplný soubor pracovních kandidátů");
  L.geoJSON(b,{style:{color:"#2261a0",weight:2,fillOpacity:0},interactive:false}).addTo(borderLayer);
  const h=csvRows(c);const cols=h.shift().map(x=>x.toLowerCase().trim());const index=Object.fromEntries(cols.map((x,i)=>[x,i]));
  let masterCount=0;
